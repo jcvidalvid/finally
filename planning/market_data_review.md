@@ -99,7 +99,7 @@ Cada `CachedPrice` del snapshot es ahora una instancia independiente. El test `t
 
 - El método `tick_once()` es **público** y retorna la lista de ticks — decisión clave de diseño: permite que los tests avancen la simulación de forma determinista sin temporizadores reales. Los tests lo aprovechan extensamente.
 - El precio mínimo `max(new_price, 0.01)` previene precios negativos o cero, aunque GBM por construcción no puede llegar a cero; es una salvaguarda defensiva correcta.
-- Los tickers dinámicos (no en `DEFAULT_TICKERS`) reciben precio log-uniforme entre 10 y 500 — implementa correctamente la especificación de `market_simulator.md §8`.
+- Los tickers dinámicos (no en `DEFAULT_TICKERS`) reciben precio uniforme entre 50 y 300 USD, según `PLAN.md` §6. Corregido el 2026-11-21: antes era log-uniforme entre 10 y 500.
 - El bucle `_run_loop` llama a `tick_once()` y luego `asyncio.sleep()` — el sleep va al *final* del tick, no al principio, lo que significa que el primer tick ocurre inmediatamente al arrancar. Comportamiento correcto para el snapshot inicial SSE.
 
 ### `massive_client.py` — Cliente Massive/Polygon
@@ -164,7 +164,7 @@ Los tres gaps identificados en la primera pasada de revisión ya están cubierto
 | Simulador usa GBM con `exp((μ - σ²/2)dt + σ√dt·Z)` | ✅ |
 | Shocks correlacionados por sector | ✅ |
 | Eventos de salto idiosincrático ocasionales | ✅ |
-| Tickers dinámicos con precio log-uniforme | ✅ |
+| Tickers dinámicos con precio uniforme 50–300 USD | ✅ (corregido 2026-11-21) |
 | `dt` efectivo acelerado para efecto visual | ✅ |
 | Massive usa polling REST por lotes | ✅ |
 | Fallback a simulador si no hay `MASSIVE_API_KEY` | ✅ |

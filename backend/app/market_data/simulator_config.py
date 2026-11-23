@@ -26,7 +26,7 @@ DEFAULT_TICKERS: dict[str, TickerConfig] = {
 GENERIC_TICKER_DRIFT = 0.06
 GENERIC_TICKER_VOLATILITY = 0.30
 GENERIC_TICKER_SECTOR = "general"
-GENERIC_SEED_PRICE_RANGE = (10.0, 500.0)
+GENERIC_SEED_PRICE_RANGE = (50.0, 300.0)
 
 # Acoplamiento de movimiento entre sectores (0 = independiente, 1 = en bloque)
 SECTOR_CORRELATION = 0.55

@@ -1,0 +1,1 @@
+Revisa el archivo de documentación en la carpeta planning llamado $ARGUMENTS, y añade preguntas, aclaraciones o comentarios en una nueva sección al final. Junto con cualquier oportunidad de simplificación.

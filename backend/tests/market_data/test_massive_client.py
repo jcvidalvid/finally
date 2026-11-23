@@ -5,7 +5,11 @@ import httpx
 import pytest
 
 from app.market_data.base import MarketDataProvider
-from app.market_data.massive_client import SNAPSHOT_PATH, MassiveMarketDataProvider
+from app.market_data.massive_client import (
+    SNAPSHOT_PATH,
+    MassiveMarketDataProvider,
+    UnknownTickerError,
+)
 from app.market_data.types import PriceTick
 
 
@@ -147,6 +151,36 @@ async def test_run_loop_swallows_http_errors_and_keeps_polling():
         await provider.stop()
 
     assert call_count >= 2
+
+
+async def test_validate_ticker_accepts_known_ticker():
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(request.url.path)
+        return httpx.Response(200, json={"status": "OK", "results": {"ticker": "AAPL"}})
+
+    provider, _ = make_provider(handler)
+
+    await provider.validate_ticker("AAPL")
+
+    assert requested == ["/v3/reference/tickers/AAPL"]
+
+
+async def test_validate_ticker_raises_unknown_ticker_on_404():
+    provider, _ = make_provider(lambda request: httpx.Response(404, json={"status": "NOT_FOUND"}))
+
+    with pytest.raises(UnknownTickerError) as excinfo:
+        await provider.validate_ticker("ZZZZ")
+
+    assert excinfo.value.ticker == "ZZZZ"
+
+
+async def test_validate_ticker_propagates_other_http_errors():
+    provider, _ = make_provider(lambda request: httpx.Response(429, json={"error": "rate"}))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await provider.validate_ticker("AAPL")
 
 
 async def test_stop_closes_the_http_client():

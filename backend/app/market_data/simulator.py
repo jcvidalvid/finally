@@ -46,7 +46,7 @@ class MarketSimulator(MarketDataProvider):
                 self._volatility[ticker] = cfg.volatility
                 self._sector[ticker] = cfg.sector
             else:
-                self._prices[ticker] = self._lognormal_seed_price()
+                self._prices[ticker] = self._random_seed_price()
                 self._drift[ticker] = GENERIC_TICKER_DRIFT
                 self._volatility[ticker] = GENERIC_TICKER_VOLATILITY
                 self._sector[ticker] = GENERIC_TICKER_SECTOR
@@ -58,10 +58,9 @@ class MarketSimulator(MarketDataProvider):
     def current_price(self, ticker: str) -> float | None:
         return self._prices.get(ticker.upper())
 
-    def _lognormal_seed_price(self) -> float:
+    def _random_seed_price(self) -> float:
         low, high = GENERIC_SEED_PRICE_RANGE
-        # log-uniforme: igual de probable un precio de $20 que de $200.
-        return math.exp(self._rng.uniform(math.log(low), math.log(high)))
+        return self._rng.uniform(low, high)
 
     async def start(self) -> None:
         self._running = True

@@ -137,7 +137,7 @@ Es `O(n)` por tick (n = nº de tickers vigilados, típicamente 10-30), trivial e
 
 Cuando se añade un ticker no pre-configurado (vía watchlist manual o acción del LLM):
 
-1. Generar un precio semilla plausible: `rng.uniform(10, 500)` con un sesgo log-uniforme (para que sea igualmente probable un precio de $20 que de $200) en lugar de uniforme lineal.
+1. Generar un precio semilla plausible: `rng.uniform(50, 300)` USD, según `planning/PLAN.md` §6.
 2. Asignar parámetros por defecto de un clúster "general" (σ ≈ 30%, μ ≈ 6% anual, correlación baja con el resto).
 3. Ampliar la matriz de correlación y recalcular su descomposición de Cholesky (operación barata para matrices de este tamaño).
 4. Incluirlo en el siguiente tick con normalidad.
@@ -145,7 +145,7 @@ Cuando se añade un ticker no pre-configurado (vía watchlist manual o acción d
 ```python
 async def add_ticker(self, ticker: str) -> None:
     if ticker not in self._prices:
-        self._prices[ticker] = lognormal_seed_price(self._rng)
+        self._prices[ticker] = self._rng.uniform(50, 300)
         self._params[ticker] = GENERIC_CLUSTER_PARAMS
         self._shocks = self._shocks.expanded_with(ticker, correlation=0.1)
     await super().add_ticker(ticker)

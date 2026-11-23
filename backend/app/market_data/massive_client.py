@@ -14,6 +14,13 @@ from .types import PriceTick
 logger = logging.getLogger(__name__)
 
 SNAPSHOT_PATH = "/v2/snapshot/locale/us/markets/stocks/tickers"
+REFERENCE_PATH = "/v3/reference/tickers/{ticker}"
+
+
+class UnknownTickerError(Exception):
+    def __init__(self, ticker: str) -> None:
+        super().__init__(f"Ticker no encontrado en Massive: {ticker}")
+        self.ticker = ticker
 
 
 class MassiveMarketDataProvider(MarketDataProvider):
@@ -75,6 +82,17 @@ class MassiveMarketDataProvider(MarketDataProvider):
                 except httpx.HTTPError as exc:
                     logger.warning("Massive API poll failed: %s", exc)
             await asyncio.sleep(self._poll_interval_seconds)
+
+    async def validate_ticker(self, ticker: str) -> None:
+        """Comprueba que Massive conoce el ticker antes de añadirlo o comprarlo.
+
+        Lanza UnknownTickerError si responde 404; otros errores HTTP se propagan.
+        Una llamada por validación, nunca desde el bucle de sondeo.
+        """
+        resp = await self._client.get(REFERENCE_PATH.format(ticker=ticker))
+        if resp.status_code == 404:
+            raise UnknownTickerError(ticker)
+        resp.raise_for_status()
 
     async def poll_once(self) -> list[PriceTick]:
         """Realiza una única llamada de snapshot por lotes y emite los ticks resultantes.

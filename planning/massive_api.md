@@ -37,7 +37,7 @@ client = RESTClient(api_key="<API_KEY>")
 | Barras agregadas (velas) | `GET /v2/aggs/ticker/{ticker}/range/{multiplier}/{timespan}/{from}/{to}` | Para el gráfico histórico al seleccionar un ticker (p. ej. velas de 1 día de los últimos 3 meses) |
 | Barras diarias agrupadas (todo el mercado) | `GET /v2/aggs/grouped/locale/us/market/stocks/{date}` | No la necesitamos en el alcance actual |
 | Último trade / última quote | `GET /v2/last/trade/{ticker}`, `/v2/last/nbbo/{ticker}` | Cubierto ya por el snapshot, no hace falta llamarlos por separado |
-| Detalles de ticker | `GET /v3/reference/tickers/{ticker}` | Útil si se quiere validar que un ticker nuevo existe antes de simularlo/seguirlo |
+| Detalles de ticker | `GET /v3/reference/tickers/{ticker}` | **Validación de altas**: una llamada al añadir o comprar un ticker sin precio en caché; `404` si no existe. Nunca en el ciclo de sondeo |
 
 El cliente Python oficial expone equivalentes directos: `client.get_snapshot_all(market_type="stocks", tickers=[...])`, `client.get_previous_close_agg(ticker)`, `client.list_aggs(ticker, multiplier, timespan, from_, to)`.
 
@@ -70,18 +70,18 @@ Con **5 llamadas/min** en el nivel gratuito, sondear cada ticker individualmente
 }
 ```
 
-Mapeo directo a nuestro modelo interno: `price = lastTrade.p`, `previous_price` se deriva del último valor cacheado (o `prevDay.c` en el primer arranque), `timestamp = lastTrade.t`.
+Mapeo directo a nuestro modelo interno: `price = lastTrade.p`, `timestamp = lastTrade.t`. `previous_price` es el último valor cacheado. La referencia del % de cambio diario es `prevDay.c`, según `planning/PLAN.md` §6.
 
 ## 7. Cliente oficial vs llamadas HTTP directas
 
 - Cliente Python oficial: `uv add massive` (paquete `massive`, antes `polygon-api-client`). Da tipado y paginación automática, pero es una dependencia más.
-- Alternativa: usar `httpx` directamente contra `https://api.massive.com/...` — más control, menos abstracción, coherente con "no sobre-ingenierices". Dado que solo necesitamos 1-2 endpoints (snapshot por lotes + aggregates para el histórico), **llamadas HTTP directas con `httpx` son suficientes** y evitan atar el proyecto a un SDK completo para dos llamadas.
+- **Decidido: `httpx` directo** contra `https://api.massive.com/...`. Solo necesitamos el snapshot por lotes y la validación por referencia; no justifica el SDK.
 
 ## 8. Recomendación para el backend
 
 1. Implementar `MassiveProvider` que cumple la misma interfaz que el simulador (ver `planning/market_data_interface.md`).
 2. Un único poller en segundo plano llama a `GET /v2/snapshot/locale/us/markets/stocks/tickers?tickers=...` con la unión de watchlist + posiciones abiertas, cada 15s (configurable según el plan/tier).
-3. Al añadir un ticker nuevo a la watchlist, se incluye automáticamente en la siguiente llamada por lotes (no hace falta una llamada extra de "seed", a diferencia del simulador).
+3. Al añadir un ticker nuevo (watchlist o compra sin precio en caché), se valida con `GET /v3/reference/tickers/{ticker}` (`404` si no existe). Si existe, entra en la siguiente llamada por lotes. No hace falta semilla: el precio lo da Massive.
 4. Si `MASSIVE_API_KEY` no está definida o está vacía → se usa el simulador (`planning/market_simulator.md`), sin tocar este código.
 
 ## Fuentes
